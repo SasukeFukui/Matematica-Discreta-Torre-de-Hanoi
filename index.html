@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Torre de Hanói</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+      background: #16213e;
+      padding: 16px 30px;
+      border-radius: 12px;
+      border: 1px solid #0f3460;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    header .instituicao {
+      font-size: 0.85rem;
+      color: #a0b4c8;
+      line-height: 1.6;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      color: #e94560;
+      margin: 8px 0 4px;
+      letter-spacing: 1px;
+    }
+
+    header .discente {
+      font-size: 0.9rem;
+      color: #7ec8e3;
+      margin-top: 6px;
+    }
+
+    .controles {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .controles label {
+      font-size: 1rem;
+      color: #ccc;
+    }
+
+    .controles select,
+    .controles button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .controles select {
+      background: #16213e;
+      color: #eee;
+      border: 1px solid #0f3460;
+    }
+
+    .controles button {
+      background: #e94560;
+      color: #fff;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    .controles button:hover {
+      background: #c73652;
+    }
+
+    .barra-info {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .caixa-info {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 10px;
+      padding: 10px 24px;
+      text-align: center;
+    }
+
+    .caixa-info .rotulo {
+      font-size: 0.75rem;
+      color: #a0b4c8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .caixa-info .valor {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #7ec8e3;
+    }
+
+    #area-jogo {
+      width: 100%;
+      max-width: 900px;
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      border-radius: 12px;
+      background: #0d1b2a;
+      border: 1px solid #0f3460;
+      cursor: default;
+      touch-action: none;
+    }
+
+    #mensagem {
+      margin-top: 20px;
+      padding: 14px 30px;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      text-align: center;
+      display: none;
+      max-width: 700px;
+    }
+
+    #mensagem.sucesso {
+      background: #1b4332;
+      border: 1px solid #52b788;
+      color: #b7e4c7;
+    }
+
+    #mensagem.fim-de-jogo {
+      background: #3d0000;
+      border: 1px solid #e63946;
+      color: #ffb3b3;
+    }
+
+    .dica {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #7a8fa6;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="instituicao">
+      Universidade Tecnológica Federal do Paraná (UTFPR) — Campus Londrina<br/>
+      Disciplina: Matemática Discreta &nbsp;|&nbsp; Professor: Alireza Mohebi Ashtiani
+    </div>
+    <h1>Torre de Hanói</h1>
+    <div class="discente">Discente: Victor Sasuke Fukui e Arthur Fiori</div>
+  </header>
+
+  <div class="controles">
+    <label for="seletorDiscos">Número de discos:</label>
+    <select id="seletorDiscos">
+      <option value="2">2</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+    </select>
+    <button id="botaoReiniciar">Reiniciar</button>
+  </div>
+
+  <div class="barra-info">
+    <div class="caixa-info">
+      <div class="rotulo">Movimentos realizados</div>
+      <div class="valor" id="contadorMovimentos">0</div>
+    </div>
+    <div class="caixa-info">
+      <div class="rotulo">Mínimo necessário (2ⁿ − 1)</div>
+      <div class="valor" id="movimentosMinimos">7</div>
+    </div>
+  </div>
+
+  <div id="area-jogo">
+    <canvas id="tela"></canvas>
+  </div>
+
+  <div id="mensagem"></div>
+  <p class="dica">Arraste os discos entre as torres para jogá-los.</p>
+
+  <script>
+    const tela = document.getElementById('tela');
+    const ctx = tela.getContext('2d');
+
+    // Cores atribuídas a cada disco, do menor para o maior índice
+    const coresDosDiscos = [
+      '#e63946','#f4a261','#e9c46a','#2a9d8f',
+      '#457b9d','#6a4c93','#f77f00','#4cc9f0'
+    ];
+
+    // Constantes de layout
+    const QUANTIDADE_TORRES   = 3;
+    const ALTURA_BASE         = 18;
+    const LARGURA_POSTE       = 10;
+    const ALTURA_DISCO        = 28;
+    const LARGURA_MINIMA_DISCO = 40;
+
+    // Estado do jogo
+    let quantidadeDiscos  = 3;
+    let torres            = [[], [], []]; // cada posição guarda a pilha de discos daquela torre
+    let contadorMovimentos = 0;
+    let movimentosMinimos  = 0;
+    let jogoEncerrado      = false;
+    let jogoVencido        = false;
+
+    // Dimensões e posições calculadas dinamicamente
+    let larguraTela, alturaTela;
+    let posicaoXTorre = [];   // coordenada X central de cada torre
+    let larguraMaximaDisco, topoPoste, baseY;
+
+    // Estado do arrasto
+    let arrastando       = false;
+    let discoArrastado   = null;  // tamanho do disco em movimento
+    let torreDeOrigem    = null;  // índice da torre de onde o disco foi retirado
+    let arrasteX         = 0;     // posição X atual do cursor/toque
+    let arrasteY         = 0;     // posição Y atual do cursor/toque
+    let torreSobCursor   = null;  // torre mais próxima do cursor durante o arrasto
+
+    // -------------------------------------------------------------------------
+    // Inicialização / reinício
+    // -------------------------------------------------------------------------
+    function inicializar() {
+      quantidadeDiscos = parseInt(document.getElementById('seletorDiscos').value);
+      movimentosMinimos = Math.pow(2, quantidadeDiscos) - 1;
+      document.getElementById('movimentosMinimos').textContent = movimentosMinimos;
+
+      // Monta a torre inicial com todos os discos na primeira torre (maior embaixo)
+      torres = [[], [], []];
+      for (let i = quantidadeDiscos; i >= 1; i--) {
+        torres[0].push(i);
+      }
+
+      contadorMovimentos = 0;
+      arrastando         = false;
+      discoArrastado     = null;
+      torreDeOrigem      = null;
+      torreSobCursor     = null;
+      jogoEncerrado      = false;
+      jogoVencido        = false;
+
+      document.getElementById('contadorMovimentos').textContent = '0';
+
+      const elementoMensagem = document.getElementById('mensagem');
+      elementoMensagem.style.display = 'none';
+      elementoMensagem.className = '';
+
+      ajustarTamanhoTela();
+      desenhar();
+    }
+
+    // -------------------------------------------------------------------------
+    // Layout
+    // -------------------------------------------------------------------------
+    function ajustarTamanhoTela() {
+      larguraTela = Math.min(window.innerWidth - 40, 900);
+      alturaTela  = Math.max(300, quantidadeDiscos * ALTURA_DISCO + 140);
+      tela.width  = larguraTela;
+      tela.height = alturaTela;
+
+      larguraMaximaDisco = Math.floor((larguraTela / QUANTIDADE_TORRES) * 0.85);
+
+      posicaoXTorre = [
+        Math.floor(larguraTela / 6),
+        Math.floor(larguraTela / 2),
+        Math.floor(5 * larguraTela / 6)
+      ];
+
+      baseY     = alturaTela - 30;
+      topoPoste = baseY - ALTURA_DISCO * quantidadeDiscos - 60;
+    }
+
+    // Calcula a largura proporcional de um disco pelo seu tamanho (1 = menor)
+    function calcularLarguraDisco(tamanho) {
+      if (quantidadeDiscos === 1) return larguraMaximaDisco;
+      return LARGURA_MINIMA_DISCO + Math.floor(
+        (tamanho - 1) * (larguraMaximaDisco - LARGURA_MINIMA_DISCO) / (quantidadeDiscos - 1)
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Utilitários de posição
+    // -------------------------------------------------------------------------
+
+    // Obtém a posição do cursor tanto para mouse quanto para toque
+    function obterPosicao(evento) {
+      const retangulo = tela.getBoundingClientRect();
+      if (evento.touches) {
+        return {
+          x: evento.touches[0].clientX - retangulo.left,
+          y: evento.touches[0].clientY - retangulo.top
+        };
+      }
+      return {
+        x: evento.clientX - retangulo.left,
+        y: evento.clientY - retangulo.top
+      };
+    }
+
+    // Retorna o índice da torre mais próxima do ponto X informado
+    function obterTorreNaPosicao(x) {
+      let torreMaisProxima = null;
+      let menorDistancia   = larguraTela / 4;
+      for (let t = 0; t < 3; t++) {
+        const distancia = Math.abs(x - posicaoXTorre[t]);
+        if (distancia < menorDistancia) {
+          menorDistancia   = distancia;
+          torreMaisProxima = t;
+        }
+      }
+      return torreMaisProxima;
+    }
+
+    // Verifica se a posição (x, y) está sobre o disco do topo de uma torre
+    function cursorSobreDiscoDeTopo(x, y, indiceTorre) {
+      const pilha = torres[indiceTorre];
+      if (pilha.length === 0) return false;
+
+      const discoTopo  = pilha[pilha.length - 1];
+      const largura    = calcularLarguraDisco(discoTopo);
+      const discoX     = posicaoXTorre[indiceTorre] - largura / 2;
+      const discoY     = baseY - pilha.length * ALTURA_DISCO;
+
+      return x >= discoX && x <= discoX + largura &&
+             y >= discoY && y <= discoY + ALTURA_DISCO;
+    }
+
+    // -------------------------------------------------------------------------
+    // Desenho
+    // -------------------------------------------------------------------------
+    function desenhar() {
+      ctx.clearRect(0, 0, larguraTela, alturaTela);
+      desenharBase();
+      desenharPostes();
+      desenharDiscos();
+      if (arrastando && discoArrastado !== null) desenharDiscoArrastado();
+    }
+
+    function desenharBase() {
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath();
+      ctx.roundRect(20, baseY, larguraTela - 40, ALTURA_BASE, 8);
+      ctx.fill();
+    }
+
+    function desenharPostes() {
+      const rotulos = ['A', 'B', 'C'];
+
+      for (let t = 0; t < 3; t++) {
+        // Destaque colorido na torre alvo durante o arrasto
+        if (arrastando && torreSobCursor === t && t !== torreDeOrigem) {
+          const podeColocar = torres[t].length === 0 ||
+            torres[t][torres[t].length - 1] > discoArrastado;
+
+          ctx.fillStyle = podeColocar
+            ? 'rgba(46, 213, 115, 0.15)'
+            : 'rgba(230, 57, 70, 0.15)';
+
+          const larguraDestaque = larguraMaximaDisco + 30;
+          ctx.beginPath();
+          ctx.roundRect(
+            posicaoXTorre[t] - larguraDestaque / 2,
+            topoPoste - 10,
+            larguraDestaque,
+            baseY - topoPoste + 10,
+            10
+          );
+          ctx.fill();
+        }
+
+        // Desenha o poste vertical
+        ctx.fillStyle = '#8d99ae';
+        ctx.beginPath();
+        ctx.roundRect(
+          posicaoXTorre[t] - LARGURA_POSTE / 2,
+          topoPoste,
+          LARGURA_POSTE,
+          baseY - topoPoste,
+          4
+        );
+        ctx.fill();
+
+        // Rótulo da torre (A, B, C)
+        ctx.fillStyle    = '#a0b4c8';
+        ctx.font         = 'bold 18px Segoe UI';
+        ctx.textAlign    = 'center';
+        ctx.fillText(rotulos[t], posicaoXTorre[t], alturaTela - 4);
+      }
+    }
+
+    function desenharDiscos() {
+      for (let t = 0; t < 3; t++) {
+        const pilha = torres[t];
+        for (let d = 0; d < pilha.length; d++) {
+          // O disco do topo que está sendo arrastado é desenhado separadamente
+          if (arrastando && torreDeOrigem === t && d === pilha.length - 1) continue;
+
+          const tamanho = pilha[d];
+          // A posição Y é calculada de baixo para cima: primeiro disco fica logo acima da base
+          desenharUmDisco(tamanho, posicaoXTorre[t], baseY - (d + 1) * ALTURA_DISCO, 1.0);
+        }
+      }
+    }
+
+    // Desenha um único disco centralizado em (centroX, topoY)
+    function desenharUmDisco(tamanho, centroX, topoY, opacidade) {
+      const largura     = calcularLarguraDisco(tamanho);
+      const x           = centroX - largura / 2;
+      const indice      = (tamanho - 1) % coresDosDiscos.length;
+
+      ctx.save();
+      ctx.globalAlpha = opacidade;
+      ctx.fillStyle   = coresDosDiscos[indice];
+      ctx.beginPath();
+      ctx.roundRect(x, topoY + 2, largura, ALTURA_DISCO - 4, 10);
+      ctx.fill();
+
+      // Número do disco ao centro
+      ctx.fillStyle  = 'rgba(0,0,0,0.4)';
+      ctx.font       = 'bold 13px Segoe UI';
+      ctx.textAlign  = 'center';
+      ctx.fillText(tamanho, centroX, topoY + ALTURA_DISCO / 2 + 5);
+      ctx.restore();
+    }
+
+    // Desenha o disco que está sendo arrastado na posição atual do cursor
+    function desenharDiscoArrastado() {
+      const largura = calcularLarguraDisco(discoArrastado);
+      const indice  = (discoArrastado - 1) % coresDosDiscos.length;
+
+      ctx.save();
+      ctx.shadowColor   = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur    = 18;
+      ctx.shadowOffsetY = 6;
+      ctx.globalAlpha   = 0.92;
+      ctx.fillStyle     = coresDosDiscos[indice];
+      ctx.beginPath();
+      ctx.roundRect(
+        arrasteX - largura / 2,
+        arrasteY - ALTURA_DISCO / 2 + 2,
+        largura,
+        ALTURA_DISCO - 4,
+        10
+      );
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle  = 'rgba(0,0,0,0.4)';
+      ctx.font       = 'bold 13px Segoe UI';
+      ctx.textAlign  = 'center';
+      ctx.fillText(discoArrastado, arrasteX, arrasteY + 5);
+    }
+
+    // -------------------------------------------------------------------------
+    // Eventos de mouse e toque
+    // -------------------------------------------------------------------------
+    function aoIniciarArrasto(evento) {
+      if (jogoEncerrado || jogoVencido) return;
+      evento.preventDefault();
+
+      const { x, y } = obterPosicao(evento);
+
+      for (let t = 0; t < 3; t++) {
+        if (torres[t].length > 0 && cursorSobreDiscoDeTopo(x, y, t)) {
+          arrastando     = true;
+          torreDeOrigem  = t;
+          discoArrastado = torres[t][torres[t].length - 1];
+          arrasteX       = x;
+          arrasteY       = y;
+          tela.style.cursor = 'grabbing';
+          desenhar();
+          return;
+        }
+      }
+    }
+
+    function aoMoverArrasto(evento) {
+      if (!arrastando) {
+        // Muda o cursor quando passa sobre o disco do topo
+        const { x, y } = obterPosicao(evento);
+        let sobreAlgumDisco = false;
+        for (let t = 0; t < 3; t++) {
+          if (torres[t].length > 0 && cursorSobreDiscoDeTopo(x, y, t)) {
+            sobreAlgumDisco = true;
+            break;
+          }
+        }
+        tela.style.cursor = sobreAlgumDisco ? 'grab' : 'default';
+        return;
+      }
+
+      evento.preventDefault();
+      const { x, y } = obterPosicao(evento);
+      arrasteX       = x;
+      arrasteY       = y;
+      torreSobCursor = obterTorreNaPosicao(x);
+      desenhar();
+    }
+
+    function aoSoltarArrasto(evento) {
+      if (!arrastando) return;
+      evento.preventDefault();
+
+      const { x } = obterPosicao(evento);
+      const torrDestino = obterTorreNaPosicao(x);
+
+      if (torrDestino !== null && torrDestino !== torreDeOrigem) {
+        const topoDestino = torres[torrDestino].length > 0
+          ? torres[torrDestino][torres[torrDestino].length - 1]
+          : Infinity;
+
+        if (discoArrastado < topoDestino) {
+          // Movimento válido: transfere o disco e incrementa o contador
+          torres[torreDeOrigem].pop();
+          torres[torrDestino].push(discoArrastado);
+          contadorMovimentos++;
+          document.getElementById('contadorMovimentos').textContent = contadorMovimentos;
+        }
+        // Movimento inválido: disco retorna à torre de origem sem contabilizar
+      }
+
+      arrastando         = false;
+      discoArrastado     = null;
+      torreDeOrigem      = null;
+      torreSobCursor     = null;
+      tela.style.cursor  = 'default';
+
+      desenhar();
+      verificarEstadoDoJogo();
+    }
+
+    tela.addEventListener('mousedown',  aoIniciarArrasto);
+    tela.addEventListener('mousemove',  aoMoverArrasto);
+    tela.addEventListener('mouseup',    aoSoltarArrasto);
+    tela.addEventListener('mouseleave', (e) => { if (arrastando) aoSoltarArrasto(e); });
+
+    tela.addEventListener('touchstart', aoIniciarArrasto, { passive: false });
+    tela.addEventListener('touchmove',  aoMoverArrasto,   { passive: false });
+    tela.addEventListener('touchend',   aoSoltarArrasto,  { passive: false });
+
+    // -------------------------------------------------------------------------
+    // Verificação de estado do jogo
+    // -------------------------------------------------------------------------
+    function verificarEstadoDoJogo() {
+      const elementoMensagem = document.getElementById('mensagem');
+
+      // Condição de vitória: todos os discos na terceira torre
+      if (torres[2].length === quantidadeDiscos) {
+        jogoVencido = true;
+        elementoMensagem.className   = 'sucesso';
+        elementoMensagem.textContent =
+          `Parabéns! Você completou a Torre de Hanói em ${contadorMovimentos} ` +
+          `movimento${contadorMovimentos !== 1 ? 's' : ''}!` +
+          (contadorMovimentos === movimentosMinimos
+            ? ' Solução ótima!'
+            : ` (mínimo possível: ${movimentosMinimos})`);
+        elementoMensagem.style.display = 'block';
+        return;
+      }
+
+      // Condição de derrota: atingiu o mínimo sem vencer
+      if (contadorMovimentos >= movimentosMinimos && !jogoVencido) {
+        jogoEncerrado = true;
+        elementoMensagem.className   = 'fim-de-jogo';
+        elementoMensagem.textContent =
+          'Game Over! Você atingiu o número mínimo de movimentos sem completar a solução.';
+        elementoMensagem.style.display = 'block';
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Eventos de controle
+    // -------------------------------------------------------------------------
+    document.getElementById('botaoReiniciar').addEventListener('click', inicializar);
+    document.getElementById('seletorDiscos').addEventListener('change', inicializar);
+    window.addEventListener('resize', () => { ajustarTamanhoTela(); desenhar(); });
+
+    inicializar();
+  </script>
+</body>
+</html>
